@@ -33,6 +33,26 @@ irm https://raw.githubusercontent.com/kalkin7/reasonix-opencode-bootstrap/main/s
 
 ---
 
+## ⚙️ `bootstrap-all.ps1` 옵션
+
+통합 부트스트랩은 다양한 상황에 맞게 옵션을 조정할 수 있습니다:
+
+| 옵션 | 설명 |
+|------|------|
+| `-SkipReasonixInstall` | Reasonix 설치 단계 생략 (이미 설치된 경우) |
+| `-SkipKeyPrompt` | API 키 입력 생략 (이미 저장된 경우) |
+| `-NoVerify` | 최종 Smoke Test 생략 |
+| `-SkillStorePath "D:\my-skills"` | 스킬 스토어 위치 지정 |
+| `-GitCloneUrl "https://github.com/..."` | 다른 스킬 저장소 URL 사용 |
+
+```powershell
+# 이미 Reasonix 설치됨 → provider + skill store만 설정
+.\scripts\bootstrap-all.ps1 -SkipReasonixInstall
+
+# 재빌드만 (설정 유지)
+.\scripts\bootstrap-all.ps1 -SkipReasonixInstall -SkipKeyPrompt
+```
+
 ## 📦 구성 요소
 
 | 파일 | 설명 |
@@ -77,7 +97,7 @@ git pull --rebase origin main
 .\setup_skills.ps1 Bootstrap
 ```
 
-자세한 내용은 [REASONIX.md](REASONIX.md)와 `setup_skills.ps1` 헤더를 참고하세요.
+자세한 내용은 `setup_skills.ps1` 헤더를 참고하세요.
 
 ---
 

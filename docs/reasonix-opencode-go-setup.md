@@ -46,9 +46,26 @@ https://github.com/esengine/DeepSeek-Reasonix/releases
 
 ## 1. 자동 설정 (권장)
 
+### 방법 A — 통합 부트스트랩 (처음부터 모든 설정)
+
+새 머신에서 Reasonix 설치 + OpenCode Go provider + Skill Store까지 한 번에:
+
 ```powershell
-.\scripts\setup-opencode-go.ps1
+.\scripts\bootstrap-all.ps1
 ```
+
+bootstrap-all.ps1이 처리하는 7단계:
+1. 필수 구성요소 확인 (PowerShell 7+, Node.js 18+)
+2. Reasonix Go 설치 (`npm install -g reasonix@next`)
+3. **OpenCode Go API 키 입력 + provider 설정** ← 이 문서의 핵심
+4. `agent-skills` 저장소 클론
+5. `setup_skills.ps1 Bootstrap` (환경 복원)
+6. `setup_skills.ps1 Verify` (검증)
+7. Smoke Test (`reasonix run "hello"`)
+
+### 방법 B — setup-opencode-go.ps1 (provider 설정만)
+
+이미 Reasonix가 설치된 경우:
 
 이 스크립트가 다음을 모두 처리합니다:
 
@@ -123,7 +140,7 @@ models = ["deepseek-v4-flash", "deepseek-v4-pro"]
 default = "deepseek-v4-flash"
 api_key_env = "OPENCODE_GO_API_KEY"
 context_window = 1000000
-reasoning_protocol = "deepseek"
+reasoning_protocol = "none"   # "none" = 안정 | "deepseek" = thinking 필드
 price = { cache_hit = 0.0028, input = 0.14, output = 0.28, currency = "$" }
 ```
 
@@ -167,27 +184,37 @@ models = ["deepseek-v4-flash", "deepseek-v4-pro"]
 default = "deepseek-v4-flash"
 api_key_env = "OPENCODE_GO_API_KEY"
 context_window = 1000000
-reasoning_protocol = "deepseek"
+reasoning_protocol = "none"   # "none" = 안정 | "deepseek" = thinking 필드
 price = { cache_hit = 0.0028, input = 0.14, output = 0.28, currency = "$" }
 ```
 
 | 필드 | 설명 |
 |---|---|
 | `base_url` | OpenCode Go endpoint. Reasonix가 내부적으로 `/chat/completions` 자동 추가 |
-| `reasoning_protocol` | `"deepseek"` 권장. `"none"`은 문제 발생 시 fallback |
+| `reasoning_protocol` | `"none"` (기본, 안정). `"deepseek"`은 실험적 — `-UseDeepseekReasoning` 옵션 필요 |
 
 ## 5. reasoning_protocol 가이드
 
 | 설정 | 용도 | 위험도 |
 |---|---|---|
-| `"deepseek"` | **권장**. `thinking`/`reasoning_effort` 전송. 호환성 테스트 통과 | 낮음 |
-| `"none"` | fallback. 문제 발생 시 `thinking`/`reasoning_effort` 미전송 | 낮음 |
+| `"none"` | **기본값 (권장)**. 안정성 최우선. `thinking`/`reasoning_effort` 미전송 | 낮음 |
+| `"deepseek"` | 실험적. `thinking`/`reasoning_effort` 전송. `-UseDeepseekReasoning` 플래그 필요 | 낮음 |
 
 `effort = "high"`는 기본 config에 넣지 않습니다. OpenCode Go가 `effort = "high"` 수용 여부는 테스트로 확인됐지만, 모든 요청에 high effort를 강제하는 것은 비용/응답시간 측면에서 기본값으로 적합하지 않습니다. 필요할 때만 수동으로 추가해 사용합니다.
 
+### 스크립트로 설정
+
+```powershell
+# 기본 (reasoning_protocol = "none") — 안정성 우선
+.\scripts\setup-opencode-go.ps1
+
+# 실험 (reasoning_protocol = "deepseek") — thinking 필드 활성화
+.\scripts\setup-opencode-go.ps1 -UseDeepseekReasoning
+```
+
 ### reasoning_protocol 실험 방법
 
-현재 기본 설정 `reasoning_protocol = "deepseek"`입니다. 수동으로 전환하는 방법입니다.
+현재 기본 설정은 `reasoning_protocol = "none"`입니다. `-UseDeepseekReasoning` 플래그로 `"deepseek"`으로 전환 가능합니다. 수동으로 전환하는 방법입니다.
 
 **1. 기본 안정성 확인**
 
@@ -265,7 +292,7 @@ reasoning_protocol = "none"
 `effort = "high"` 줄은 제거 또는 주석 처리.  
 **참고**: `effort`는 기본값이 아니라 실험/수동 옵션입니다. OpenCode Go가 수용하는 것은 확인됐지만, 모든 요청에 고정할 필요는 없습니다.
 
-**권장**: 기본 설정은 `reasoning_protocol = "deepseek"`입니다. 400 오류가 발생하는 경우에만 `"none"`으로 내리면 됩니다.
+**권장**: 기본 설정은 `reasoning_protocol = "none"`입니다. `"deepseek"` 실험은 `setup-opencode-go.ps1 -UseDeepseekReasoning`로 전환하세요.
 
 ## 6. 예상 문제 및 해결
 
