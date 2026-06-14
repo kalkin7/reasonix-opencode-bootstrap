@@ -32,7 +32,8 @@
 param(
   [switch] $NoDefault,
   [switch] $SkipKeyPrompt,
-  [switch] $UseDeepseekReasoning
+  [switch] $UseDeepseekReasoning,
+  [string] $OpenCodeApiKey = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,10 +46,15 @@ if (-not $rxVersion) {
   Write-Host "설치하려면: npm install -g reasonix@next" -ForegroundColor Cyan
   Write-Host "또는 bootstrap-all.ps1 을 실행하세요." -ForegroundColor Cyan
   Write-Host ""
-  $confirm = Read-Host "계속 진행하시겠습니까? (Reasonix 미설치 시 provider 설정만 저장됩니다) [Y/n]"
-  if ($confirm -ne "" -and $confirm -notmatch '^(y|Y)') {
-    Write-Host "중단합니다."
-    exit 1
+  # If running non-interactively (API key provided), skip confirmation
+  if (-not $OpenCodeApiKey) {
+    $confirm = Read-Host "계속 진행하시겠습니까? (Reasonix 미설치 시 provider 설정만 저장됩니다) [Y/n]"
+    if ($confirm -ne "" -and $confirm -notmatch '^(y|Y)') {
+      Write-Host "중단합니다."
+      exit 1
+    }
+  } else {
+    Write-Host "비대화형 모드: Reasonix 미설치 상태로 진행합니다." -ForegroundColor Gray
   }
 }
 
@@ -86,6 +92,40 @@ if (-not $SkipKeyPrompt) {
   Write-Host "Reasonix OpenCode Go Setup"
   Write-Host "============================"
   Write-Host ""
+
+  if ($OpenCodeApiKey) {
+    # Non-interactive: use provided key
+    $plainKey = $OpenCodeApiKey
+    Write-Host "Using API key from -OpenCodeApiKey parameter" -ForegroundColor Gray
+
+    New-Item -ItemType Directory -Force -Path $CredentialsDir | Out-Null
+    $keyLine = "$KeyEnvName=$plainKey"
+
+    if (Test-Path -LiteralPath $CredentialsPath) {
+      $existing = Get-Content -LiteralPath $CredentialsPath
+      $updated = $false
+
+      $next = foreach ($line in $existing) {
+        if ($line -match "^\s*$([regex]::Escape($KeyEnvName))\s*=") {
+          $updated = $true
+          $keyLine
+        } else {
+          $line
+        }
+      }
+
+      if (-not $updated) {
+        $next += $keyLine
+      }
+
+      Set-Content -LiteralPath $CredentialsPath -Value $next -Encoding UTF8
+    } else {
+      Set-Content -LiteralPath $CredentialsPath -Value @($keyLine) -Encoding UTF8
+    }
+
+    Write-Host ""
+    Write-Host "API key saved to $CredentialsPath"
+  } else {
 
   $secureKey = Read-Host "Enter OpenCode Go API key" -AsSecureString
 

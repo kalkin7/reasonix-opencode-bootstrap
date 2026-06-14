@@ -23,7 +23,7 @@ irm https://raw.githubusercontent.com/kalkin7/reasonix-opencode-bootstrap/main/s
 스크립트가 자동으로:
 | 단계 | 내용 |
 |------|------|
-| 1/7 | 필수 구성요소 확인 (PowerShell 7+, Node.js 18+) |
+| 1/7 | 필수 구성요소 확인 (PowerShell 7+, Node.js 18+, git) |
 | 2/7 | Reasonix Go 설치 (`npm install -g reasonix@next`) |
 | 3/7 | OpenCode Go API 키 입력 + provider 설정 |
 | 4/7 | `agent-skills` 저장소 클론 (GitHub) |
@@ -33,12 +33,37 @@ irm https://raw.githubusercontent.com/kalkin7/reasonix-opencode-bootstrap/main/s
 
 ---
 
+## 🤖 LLM에게 이 저장소를 주고 자동 설치시키는 법
+
+다른 AI 에이전트(Claude, ChatGPT, Gemini 등)에게 **"내 개발 환경을 이걸로 세팅해줘"** 라고 하려면,
+아래 **정확한 명령어**를 함께 알려주세요.
+
+### 정확한 LLM 프롬프트 템플릿
+
+> 내 Reasonix + OpenCode Go 개발 환경을 이 Windows 머신에 설정해줘.
+>
+> 1. `git clone https://github.com/kalkin7/reasonix-opencode-bootstrap.git`
+> 2. `cd reasonix-opencode-bootstrap`
+> 3. 실행 정책 우회: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force`
+> 4. 실행: `.\scripts\bootstrap-all.ps1 -OpenCodeApiKey "여기에_OPEnCODE_GO_API_키_입력"`
+>
+> 내 OpenCode Go API 키는: `sk-your-key-here`
+
+> **⚠️ 중요**: `-OpenCodeApiKey` 파라미터를 반드시 포함해야 합니다. 없으면 `Read-Host`에서 LLM이 영원히 대기합니다.
+
+### macOS / Linux에서 Windows VM으로 설치할 때
+
+Linux/macOS의 LLM이 Windows 머신에 SSH 등으로 접속해 설치할 때도 위와 동일한 명령어를 사용하세요. |
+
+---
+
 ## ⚙️ `bootstrap-all.ps1` 옵션
 
 통합 부트스트랩은 다양한 상황에 맞게 옵션을 조정할 수 있습니다:
 
 | 옵션 | 설명 |
 |------|------|
+| `-OpenCodeApiKey "sk-..."` | **LLM/비대화형 모드.** API 키를 직접 전달, 모든 프롬프트 생략 |
 | `-SkipReasonixInstall` | Reasonix 설치 단계 생략 (이미 설치된 경우) |
 | `-SkipKeyPrompt` | API 키 입력 생략 (이미 저장된 경우) |
 | `-NoVerify` | 최종 Smoke Test 생략 |
@@ -77,6 +102,7 @@ irm https://raw.githubusercontent.com/kalkin7/reasonix-opencode-bootstrap/main/s
 | `-NoDefault` | provider만 추가, 기본 모델 변경 안 함 |
 | `-SkipKeyPrompt` | API 키 저장 생략 (이미 저장된 경우) |
 | `-UseDeepseekReasoning` | `reasoning_protocol = "deepseek"` 사용 (thinking 필드) |
+| `-OpenCodeApiKey "sk-..."` | API 키를 직접 전달 (비대화형 모드) |
 
 ### 스킬 스토어만 재설정
 

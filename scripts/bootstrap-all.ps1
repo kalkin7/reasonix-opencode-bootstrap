@@ -2,13 +2,14 @@
 .SYNOPSIS
   All-in-one Reasonix + OpenCode Go + Skill Store bootstrap for a new machine.
   One script to install everything and verify it works.
+  Fully LLM-friendly: accepts -OpenCodeApiKey to skip all interactive prompts.
 
 .DESCRIPTION
   Run this on a FRESH Windows machine to turn it into a Reasonix + OpenCode Go
   DeepSeek V4 development environment with full skill store.
 
   It does (in order):
-    1. Checks prerequisites: PowerShell 7+, Node.js 18+
+    1. Checks prerequisites: PowerShell 7+, Node.js 18+, git
     2. Installs/updates Reasonix Go (npm install -g reasonix@next)
     3. Prompts for OpenCode Go API key, saves to %APPDATA%\reasonix\credentials
     4. Adds opencode-go-deepseek provider to %APPDATA%\reasonix\config.toml
@@ -17,11 +18,16 @@
     7. Runs setup_skills.ps1 Verify
     8. Quick smoke test: reasonix run "hello"
 
+.PARAMETER OpenCodeApiKey
+  API key for OpenCode Go. When provided, skips the interactive key prompt.
+  Essential for LLM-driven / non-interactive setup.
+
 .PARAMETER SkipReasonixInstall
   Skip npm install step (useful if already installed).
 
 .PARAMETER SkipKeyPrompt
   Skip API key prompt (use when key is already in credentials).
+  Ignored when -OpenCodeApiKey is also provided.
 
 .PARAMETER SkillStorePath
   Where to clone/find the skill store. Default: "$env:USERPROFILE\agent-skills".
@@ -33,8 +39,12 @@
   Skill store Git URL. Default: https://github.com/kalkin7/agent-skills.git
 
 .EXAMPLE
-  # Normal one-click setup
+  # Normal one-click setup (interactive)
   .\bootstrap-all.ps1
+
+.EXAMPLE
+  # LLM-driven setup (non-interactive, all prompts skipped)
+  .\bootstrap-all.ps1 -OpenCodeApiKey "sk-xxxx"
 
 .EXAMPLE
   # Re-run safely (already installed, just update config + skills)
@@ -46,6 +56,7 @@
 #>
 
 param(
+  [string] $OpenCodeApiKey = "",
   [switch] $SkipReasonixInstall,
   [switch] $SkipKeyPrompt,
   [string] $SkillStorePath = "",
@@ -54,6 +65,22 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# === Bypass execution policy for this process (safe, only affects this run) ===
+$prevPolicy = Get-ExecutionPolicy -Scope Process
+if ($prevPolicy -eq "Restricted" -or $prevPolicy -eq "AllSigned" -or $prevPolicy -eq "RemoteSigned") {
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+  Write-Host "  Execution policy bypassed for this process (was: $prevPolicy)" -ForegroundColor Gray
+}
+
+# === PATH refresh helper (needed after npm install -g) ===
+function Update-EnvironmentPath {
+  # Reload PATH from registry so newly installed npm globals are found
+  $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+  if ($machinePath) { $env:Path = $machinePath + ';' + $env:Path }
+  if ($userPath) { $env:Path = $userPath + ';' + $env:Path }
+}
 
 # Colors
 function Title($msg)   { Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
@@ -89,6 +116,14 @@ if (-not $nodeVersion) {
 }
 OK "Node.js $nodeVersion"
 
+$gitVersion = git --version 2>$null
+if (-not $gitVersion) {
+  Err "git not found. Git is required for skill store."
+  Err "Install: winget install Git.Git or https://git-scm.com"
+  exit 1
+}
+OK $gitVersion
+
 # ============================================================================
 # 2. INSTALL REASONIX GO
 # ============================================================================
@@ -101,6 +136,8 @@ if (-not $SkipReasonixInstall) {
   if ($LASTEXITCODE -ne 0) {
     Warn "npm install exit code: $LASTEXITCODE (may be ok)"
   }
+  # Refresh PATH so newly installed reasonix is found
+  Update-EnvironmentPath
 }
 
 $rxVersion = reasonix --version 2>$null
@@ -121,6 +158,7 @@ if (Test-Path $setupScript) {
   Step "Running setup-opencode-go.ps1 ..."
   $keyArgs = @()
   if ($SkipKeyPrompt) { $keyArgs += "-SkipKeyPrompt" }
+  if ($OpenCodeApiKey) { $keyArgs += "-OpenCodeApiKey"; $keyArgs += $OpenCodeApiKey }
   & $setupScript @keyArgs
   if ($LASTEXITCODE -ne 0) {
     Err "setup-opencode-go.ps1 failed (exit: $LASTEXITCODE)"
@@ -128,8 +166,42 @@ if (Test-Path $setupScript) {
   }
   OK "OpenCode Go Provider configured"
 } else {
+  # Fallback for irm|iex remote execution (no companion script on disk)
   Warn "setup-opencode-go.ps1 not found at: $setupScript"
-  Warn "Run manually: $ScriptRoot\setup-opencode-go.ps1"
+  Step "Using inline fallback for OpenCode Go provider setup..."
+
+  $CredentialsDir  = Join-Path $env:APPDATA "reasonix"
+  $CredentialsPath = Join-Path $CredentialsDir "credentials"
+  $ConfigPath      = Join-Path $CredentialsDir "config.toml"
+  New-Item -ItemType Directory -Force -Path $CredentialsDir | Out-Null
+
+  # Save API key
+  if ($OpenCodeApiKey) {
+    $keyLine = "OPENCODE_GO_API_KEY=$OpenCodeApiKey"
+    Set-Content -LiteralPath $CredentialsPath -Value @($keyLine) -Encoding UTF8
+    OK "API key saved to $CredentialsPath"
+  } elseif (-not $SkipKeyPrompt) {
+    Err "No API key provided. Use -OpenCodeApiKey or run interactively from a cloned repo."
+    exit 1
+  }
+
+  # Write provider config
+  $providerConfig = @"
+default_model = "opencode-go-deepseek"
+
+[[providers]]
+name = "opencode-go-deepseek"
+kind = "openai"
+base_url = "https://opencode.ai/zen/go/v1"
+models = ["deepseek-v4-flash", "deepseek-v4-pro"]
+default = "deepseek-v4-flash"
+api_key_env = "OPENCODE_GO_API_KEY"
+context_window = 1000000
+reasoning_protocol = "none"
+price = { cache_hit = 0.0028, input = 0.14, output = 0.28, currency = "$" }
+"@
+  Set-Content -LiteralPath $ConfigPath -Value $providerConfig -Encoding UTF8
+  OK "Provider config written to $ConfigPath"
 }
 
 # ============================================================================
