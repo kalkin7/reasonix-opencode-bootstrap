@@ -1,0 +1,24 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+
+# CodeGraph build artifacts
+.codegraph/
+
+# Windows shortcuts
+*.lnk
+
+# Temporary files
+*.bak
+*.bak-*
+temp/
+tmp/
