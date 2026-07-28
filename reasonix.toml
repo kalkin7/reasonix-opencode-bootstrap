@@ -1,0 +1,46 @@
+# Reasonix configuration.
+config_version = 5
+default_model = "opencode-go-deepseek/deepseek-v4-flash"
+
+[agent]
+temperature       = 0.0
+auto_plan   = "off"
+soft_compact_ratio  = 0.5
+compact_ratio       = 0.8
+compact_force_ratio = 0.9
+planner_model  = "opencode-go-deepseek/deepseek-v4-pro"
+recovery_model = "opencode-go-deepseek/deepseek-v4-pro"
+
+[tools]
+enabled = []
+bash_timeout_seconds = 120
+mcp_call_timeout_seconds = 300
+
+[codegraph]
+enabled      = true
+auto_install = true
+
+[lsp]
+enabled = true
+
+[skills]
+
+[permissions]
+mode  = "ask"
+deny = ["Bash(rm -rf*)", "Bash(git push*)"]
+allow = ["Bash(go test:*)", "Bash(git status:*)", "Bash(git diff:*)"]
+
+[sandbox]
+bash    = "off"
+network = true
+
+[[plugins]]
+name    = "everything"
+command = "uvx"
+args    = ["everything-mcp"]
+env     = { EVERYTHING_ES_PATH = "C:\Users\kalkin7\AppData\Local\Microsoft\WinGet\Packages\voidtools.Everything.Cli_Microsoft.Winget.Source_8wekyb3d8bbwe\es.exe" }
+
+[[plugins]]
+name    = "upnote-lens"
+command = "uvx"
+args    = ["upnote-lens-mcp"]

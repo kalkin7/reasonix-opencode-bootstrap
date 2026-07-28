@@ -26,6 +26,7 @@ irm https://raw.githubusercontent.com/kalkin7/reasonix-opencode-bootstrap/main/s
 | 1/7 | 필수 구성요소 확인 (PowerShell 7+, Node.js 18+, git) |
 | 2/7 | Reasonix Go 설치 (`npm install -g reasonix@next`) |
 | 3/7 | OpenCode Go API 키 입력 + provider 설정 |
+| 3.5/7 | Planner/Recovery 모델 + MCP 플러그인 자동 설정 |
 | 4/7 | `agent-skills` 저장소 클론 (GitHub) |
 | 5/7 | `setup_skills.ps1 Bootstrap` 실행 |
 | 6/7 | `setup_skills.ps1 Verify` 실행 |
@@ -85,6 +86,8 @@ Linux/macOS의 LLM이 Windows 머신에 SSH 등으로 접속해 설치할 때도
 | `scripts/bootstrap-all.ps1` | **통합 부트스트랩** — 모든 단계를 한 번에 실행 |
 | `scripts/setup-opencode-go.ps1` | OpenCode Go provider + API 키 설정 전용 |
 | `scripts/test-opencode-go.ps1` | 연결성 / provider / 모델 전환 테스트 |
+| `reasonix.toml` | Reasonix 프로젝트 설정 (planner/recovery/MCP) |
+| `REASONIX.md` | 프로젝트 메모리 (스킬 시스템 지시사항) |
 | `docs/reasonix-opencode-go-setup.md` | 상세 설정 가이드 (한국어) |
 
 ---
@@ -133,5 +136,9 @@ git pull --rebase origin main
 |------|------|
 | 401 인증 실패 | API 키 재발급 후 `setup-opencode-go.ps1` 재실행 |
 | 400 Bad Request | `-UseDeepseekReasoning` 없이 실행 (기본: `reasoning_protocol = "none"`) |
+| 모델 전환 | Reasonix 내에서 `/model opencode-go-deepseek/deepseek-v4-pro` |
+| Plan 모드에서 pro 사용 | `reasonix.toml`의 `planner_model` 활성화됨 (bootstrap 3.5단계) |
+| 자동 복구 모델 | `recovery_model` = pro (저위험 오류 시 pro가 검토) |
 | `reasonix` 명령 없음 | `npm install -g reasonix@next` 로 Go판 설치 |
 | 모델 전환 | Reasonix 내에서 `/model opencode-go-deepseek/deepseek-v4-pro` |
+

@@ -119,6 +119,53 @@ Reasonix 내에서 `/model` 명령어로 전환:
 /model opencode-go-deepseek/deepseek-v4-flash
 ```
 
+## 2.5. 추가 설정 (planner/recovery + MCP 플러그인)
+
+bootstrap-all.ps1을 실행한 경우 3.5단계에서, setup-opencode-go.ps1을 실행한 경우 10단계에서 자동으로 추가됩니다.
+
+### Planner 모델 (Plan 전용 pro)
+
+```toml
+[agent]
+planner_model = "opencode-go-deepseek/deepseek-v4-pro"
+```
+
+- Plan 모드 진입 시 자동으로 pro 모델 사용
+- auto/ask 모드는 flash 유지
+- `/plan` 으로 수동 진입 (`auto_plan = "off"`)
+
+### Recovery 모델 (자동 복구)
+
+```toml
+[agent]
+recovery_model = "opencode-go-deepseek/deepseek-v4-pro"
+```
+
+- 저위험 오류 발생 시 pro 모델이 검토 및 복구 방안 제시
+- fallback 체인: recovery → guardian → main model
+
+### MCP 플러그인
+
+```toml
+[[plugins]]
+name    = "everything"
+command = "uvx"
+args    = ["everything-mcp"]
+
+[[plugins]]
+name    = "upnote-lens"
+command = "uvx"
+args    = ["upnote-lens-mcp"]
+```
+
+- `everything`: Windows 파일 검색 (Everything 엔진 필요)
+- `upnote-lens`: UpNote 노트 검색/읽기/생성
+
+### 프로젝트 reasonix.toml
+
+저장소 루트의 `reasonix.toml`에 모든 설정이 포함되어 있습니다. Reasonix로 이 디렉토리를 열면 자동 적용됩니다.
+
+---
 ## 3. 설정 결과 확인
 
 스크립트가 생성한 config 파일:
@@ -309,3 +356,5 @@ reasoning_protocol = "none"
 - [Reasonix 공식 저장소](https://github.com/esengine/DeepSeek-Reasonix)
 - [OpenCode Go 문서](https://opencode.ai/docs/go/)
 - [OpenCode Go API key](https://opencode.ai/auth)
+
+

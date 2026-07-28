@@ -205,6 +205,43 @@ price = { cache_hit = 0.0028, input = 0.14, output = 0.28, currency = "$" }
 }
 
 # ============================================================================
+# 3.5. ADDITIONAL GLOBAL CONFIG (planner, recovery, MCP plugins)
+# ============================================================================
+
+Title "3.5/7 - Additional Reasonix Config"
+
+$ConfigPath = Join-Path $env:APPDATA "reasonix" "config.toml"
+$extraConfig = @"
+
+[agent]
+planner_model  = "opencode-go-deepseek/deepseek-v4-pro"
+recovery_model = "opencode-go-deepseek/deepseek-v4-pro"
+
+[[plugins]]
+name    = "everything"
+command = "uvx"
+args    = ["everything-mcp"]
+env     = { EVERYTHING_ES_PATH = "C:\Users\kalkin7\AppData\Local\Microsoft\WinGet\Packages\voidtools.Everything.Cli_Microsoft.Winget.Source_8wekyb3d8bbwe\es.exe" }
+
+[[plugins]]
+name    = "upnote-lens"
+command = "uvx"
+args    = ["upnote-lens-mcp"]
+"@
+
+if (Test-Path $ConfigPath) {
+  $current = Get-Content $ConfigPath -Raw -Encoding UTF8
+  if ($current -notmatch "planner_model") {
+    Add-Content -LiteralPath $ConfigPath -Value $extraConfig -Encoding UTF8
+    OK "planner_model, recovery_model, MCP plugins added to global config"
+  } else {
+    OK "planner_model already in global config (skipped)"
+  }
+} else {
+  Warn "Global config not found: $ConfigPath. Bootstrap will create it later."
+}
+
+# ============================================================================
 # 4. SKILL STORE CLONE / UPDATE
 # ============================================================================
 

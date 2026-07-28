@@ -6,7 +6,7 @@
 .DESCRIPTION
   Run this script ONCE. It will:
     - Prompt for the OpenCode Go API key (masked input)
-    - Save it to %APPDATA%\reasonix\credentials
+    - Save it to %APPDATA%\reasonix\.env
     - Add the opencode-go-deepseek provider to %APPDATA%\reasonix\config.toml
     - Set opencode-go-deepseek as the default model
     - Backup any existing config before writing
@@ -17,7 +17,7 @@
   Add the provider but do NOT change the existing default_model.
 
 .PARAMETER SkipKeyPrompt
-  Skip the API key prompt. Use when the key is already in credentials
+  Skip the API key prompt. Use when the key is already in .env
   and you only want to add/update the provider config.
 
 .EXAMPLE
@@ -81,7 +81,7 @@ $NewDefaultModel = "default_model = ""$ProviderName"""
 # === Paths ===
 
 $CredentialsDir  = Join-Path $env:APPDATA "reasonix"
-$CredentialsPath = Join-Path $CredentialsDir "credentials"
+$CredentialsPath = Join-Path $CredentialsDir ".env"
 $ConfigPath      = Join-Path $CredentialsDir "config.toml"
 
 # ==============================================================================
@@ -178,6 +178,7 @@ if (-not $SkipKeyPrompt) {
     }
     $plainKey = $null
   }
+}
 } else {
   Write-Host "Skipping API key prompt (-SkipKeyPrompt)."
 }
@@ -381,6 +382,39 @@ if (-not $NoDefault) {
   Write-Host "Switch inside Reasonix: /model $ProviderName/deepseek-v4-flash"
 }
 Write-Host ""
+# ==============================================================================
+# 10. ADDITIONAL CONFIG (planner, recovery, MCP plugins)
+# ==============================================================================
+
+$extraConfig = @"
+
+[agent]
+planner_model  = "opencode-go-deepseek/deepseek-v4-pro"
+recovery_model = "opencode-go-deepseek/deepseek-v4-pro"
+
+[[plugins]]
+name    = "everything"
+command = "uvx"
+args    = ["everything-mcp"]
+env     = { EVERYTHING_ES_PATH = "C:\Users\kalkin7\AppData\Local\Microsoft\WinGet\Packages\voidtools.Everything.Cli_Microsoft.Winget.Source_8wekyb3d8bbwe\es.exe" }
+
+[[plugins]]
+name    = "upnote-lens"
+command = "uvx"
+args    = ["upnote-lens-mcp"]
+"@
+
+$currentConfig = Get-Content $ConfigPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
+if ($currentConfig -and ($currentConfig -notmatch "planner_model")) {
+  Add-Content -LiteralPath $ConfigPath -Value $extraConfig -Encoding UTF8
+  Write-Host "Extra config (planner, recovery, plugins) added to $ConfigPath" -ForegroundColor Green
+} elseif (-not $currentConfig) {
+  Write-Host "Config not found yet, skipping extra config." -ForegroundColor Yellow
+} else {
+  Write-Host "Extra config already present (skipped)." -ForegroundColor Gray
+}
+
 Write-Host "You can now run:"
 Write-Host "  reasonix code"
 Write-Host "  reasonix run ""hello"""
+
